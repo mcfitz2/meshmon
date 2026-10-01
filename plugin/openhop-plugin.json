@@ -1,0 +1,11 @@
+{
+  "schema": 1,
+  "id": "meshmon",
+  "name": "meshmon",
+  "version": "0.1.0",
+  "description": "Polls MeshCore repeaters for status and telemetry and exports up/down, battery and telemetry as Prometheus metrics.",
+  "runtime": {
+    "type": "python",
+    "entrypoint": "meshmon"
+  }
+}

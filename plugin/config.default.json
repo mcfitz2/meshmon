@@ -1,0 +1,9 @@
+{
+  "companion_host": "127.0.0.1",
+  "companion_port": 5000,
+  "listen_host": "0.0.0.0",
+  "listen_port": 9110,
+  "interval_seconds": 900,
+  "down_after_misses": 2,
+  "nodes": []
+}
