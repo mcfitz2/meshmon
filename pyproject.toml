@@ -3,6 +3,8 @@ name = "meshmon"
 version = "0.1.1"
 description = "openHop Repeater plugin: polls MeshCore repeaters for status and telemetry and exports them as Prometheus metrics"
 readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
 requires-python = ">=3.11"
 dependencies = [
     "meshcore==2.3.14",

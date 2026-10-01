@@ -8,8 +8,8 @@ from meshmon.link import NoReplyError, Reading, Status
 from meshmon.metrics import Metrics
 from meshmon.poller import Poller
 
-REPEATER = Node("CHZ Repeater", "4902f245131cbc9cd40f10aac811d53c23eece753b222ce0b3713fe356fb2ca9")
-ROOM = Node("CHZ Room", "15b14ff0a544127ab78c" + "0" * 44, password="guest")
+REPEATER = Node("Hilltop Repeater", "0123456789abcdef" * 4)
+ROOM = Node("Library Room", "fedcba9876543210" * 4, password="guest")
 
 STATUS = Status(
     battery_mv=4012,
@@ -90,7 +90,7 @@ def test_it_logs_in_with_the_nodes_password_before_asking() -> None:
 
     station.poll(session)
 
-    assert session.logins == [("CHZ Room", "guest")]
+    assert session.logins == [("Library Room", "guest")]
 
 
 def test_telemetry_readings_are_labelled_by_channel_and_type() -> None:

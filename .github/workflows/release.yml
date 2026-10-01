@@ -13,10 +13,10 @@ jobs:
 
   release:
     needs: ci
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v6
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10
       - run: uv build
       # openHop installs the wheel by the version in its manifest, so the tag,
       # the package and the manifest must all agree.

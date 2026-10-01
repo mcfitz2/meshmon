@@ -92,7 +92,7 @@ lets a blank password in.
   "interval_seconds": 900,
   "down_after_misses": 2,
   "nodes": [
-    {"name": "CHZ Repeater", "public_key": "4902f245…", "password": "guest password"}
+    {"name": "Hilltop Repeater", "public_key": "<64 hex digits>", "password": "<guest password>"}
   ]
 }
 ```
@@ -106,7 +106,7 @@ To run meshmon by hand, give it the path: `meshmon config.json`.
 
 ```alloy
 prometheus.scrape "meshmon" {
-  targets         = [{"__address__" = "192.168.1.43:9110"}]
+  targets         = [{"__address__" = "<pi-address>:9110"}]
   scrape_interval = "60s"
   forward_to      = [prometheus.remote_write.mimir.receiver]
 }

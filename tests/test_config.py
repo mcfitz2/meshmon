@@ -5,7 +5,7 @@ import pytest
 
 from meshmon.config import Config, ConfigError, Node, load
 
-KEY = "4902f245131cbc9cd40f10aac811d53c23eece753b222ce0b3713fe356fb2ca9"
+KEY = "0123456789abcdef" * 4
 
 
 def write(path: Path, data: object) -> Path:
@@ -33,13 +33,13 @@ def test_nodes_are_read_with_a_blank_password_by_default(tmp_path: Path) -> None
             tmp_path / "config.json",
             {
                 "interval_seconds": 600,
-                "nodes": [{"name": "CHZ Repeater", "public_key": KEY.upper()}],
+                "nodes": [{"name": "Hilltop Repeater", "public_key": KEY.upper()}],
             },
         )
     )
 
     assert config.interval_seconds == 600
-    assert config.nodes == (Node(name="CHZ Repeater", public_key=KEY, password=""),)
+    assert config.nodes == (Node(name="Hilltop Repeater", public_key=KEY, password=""),)
 
 
 @pytest.mark.parametrize(
