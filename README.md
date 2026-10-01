@@ -65,12 +65,14 @@ transmit. In `no_tx` they can't, and every node will look down.
 
 ### 2. Install the plugin
 
-Build the wheel with `uv build`, then install `dist/meshmon-*.whl` from openHop's
-Plugins page, or through its API:
+Download the wheel from the
+[latest release](https://github.com/mcfitz2/meshmon/releases/latest) (or build
+it with `uv build`), then install it from openHop's Plugins page, or through
+its API:
 
 ```sh
 curl -X POST -H "Authorization: Bearer $TOKEN" \
-  -F wheel=@dist/meshmon-0.1.0-py3-none-any.whl \
+  -F wheel=@meshmon-0.1.1-py3-none-any.whl \
   http://<pi>:8000/api/plugins/install
 ```
 
@@ -126,6 +128,16 @@ uv sync
 uv run pytest
 uv run ruff check src tests && uv run mypy src tests
 ```
+
+To release, set the same version in `pyproject.toml` and
+`plugin/openhop-plugin.json`, run `uv lock`, commit, then tag and push:
+
+```sh
+git tag v0.1.2 && git push origin v0.1.2
+```
+
+The Release workflow runs CI, checks that the wheel carries the manifest and
+that both versions match the tag, then publishes the wheel to a GitHub release.
 
 The poller is tested against a fake session. `meshmon.link`, which drives
 `meshcore_py`, is not unit tested. Check it against a real companion.

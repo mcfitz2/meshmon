@@ -1,0 +1,33 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  ci:
+    uses: ./.github/workflows/ci.yml
+
+  release:
+    needs: ci
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - run: uv build
+      # openHop installs the wheel by the version in its manifest, so the tag,
+      # the package and the manifest must all agree.
+      - name: wheel carries the plugin manifest, and its versions match the tag
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          wheel=$(ls dist/*.whl)
+          [ "$(basename "$wheel" | cut -d- -f2)" = "$version" ]
+          manifest=$(unzip -p "$wheel" '*/share/openhop/plugins/meshmon/openhop-plugin.json')
+          [ "$(echo "$manifest" | jq -r .version)" = "$version" ]
+          unzip -l "$wheel" | grep -q 'share/openhop/plugins/meshmon/config.default.json'
+      - run: gh release create "$GITHUB_REF_NAME" dist/* --generate-notes
+        env:
+          GH_TOKEN: ${{ github.token }}
