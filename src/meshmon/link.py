@@ -5,6 +5,7 @@ Check it against the real companion.
 """
 
 import asyncio
+import logging
 from collections.abc import AsyncIterator, Awaitable, Callable
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
@@ -64,6 +65,16 @@ _REPEATER = 2
 """``ADV_TYPE_REPEATER``; a room server logs in and answers the same way."""
 
 Reply = TypeVar("Reply")
+
+
+def _not_the_login_nag(record: logging.LogRecord) -> bool:
+    # meshcore_py warns on every send_login, but send_login_sync waits for
+    # LOGIN_SUCCESS from any node and can't tell a refused login from silence,
+    # so meshmon keeps send_login and waits for the node's answer itself.
+    return "send_login_sync" not in record.getMessage()
+
+
+logging.getLogger("meshcore").addFilter(_not_the_login_nag)
 
 
 @asynccontextmanager
