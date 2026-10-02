@@ -49,9 +49,18 @@ class FakeCommands:
             EventType.MSG_SENT,
             {"suggested_timeout": mc.suggested_timeout_ms, "expected_ack": b"\x00\x00\x00\x01"},
         )
-        for event in mc.replies.get(key, []):
-            await mc.dispatcher.dispatch(event)
+        events = mc.replies.get(key, [])
+        if mc.reply_delay:
+            mc.pending.append(asyncio.get_running_loop().create_task(self._dispatch_later(events)))
+        else:
+            for event in events:
+                await mc.dispatcher.dispatch(event)
         return result
+
+    async def _dispatch_later(self, events: list[Event]) -> None:
+        await asyncio.sleep(self._mc.reply_delay)
+        for event in events:
+            await self._mc.dispatcher.dispatch(event)
 
 
 class FakeMeshCore:
@@ -62,6 +71,8 @@ class FakeMeshCore:
         self.replies: dict[str, list[Event]] = {}
         self.result: Event | None = None
         self.suggested_timeout_ms = 50
+        self.reply_delay = 0.0
+        self.pending: list[asyncio.Task[None]] = []
         self.commands = FakeCommands(self)
 
     def subscribe(
@@ -166,6 +177,17 @@ def test_a_reply_meshmon_cant_read_is_a_bad_reply_not_silence() -> None:
 
     assert time.monotonic() - started < 1
     assert mc.dispatcher.subscriptions == []
+
+
+def test_a_reply_a_little_after_the_suggested_time_still_counts() -> None:
+    mc = FakeMeshCore()
+    mc.suggested_timeout_ms = 1000
+    mc.reply_delay = 1.1
+    mc.replies["STATUS"] = [status_reply(REPEATER)]
+
+    status = run(mc, lambda session: session.status(REPEATER))
+
+    assert isinstance(status, Status)
 
 
 def test_a_refused_login_is_false() -> None:
