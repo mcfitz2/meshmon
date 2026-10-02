@@ -19,6 +19,7 @@ All are labelled `node`, the name you gave it in `config.json`.
 | `meshcore_node_up` | 1 unless the node has missed `down_after_misses` polls in a row |
 | `meshcore_node_missed_polls` | Polls missed in a row |
 | `meshcore_node_login_ok` | 0 if the node refused the login (wrong password) |
+| `meshcore_node_poll_seconds` | How long its last answered poll took |
 | `meshcore_node_last_seen_timestamp_seconds` | When it last answered with its status |
 | `meshcore_node_battery_volts` | Battery voltage |
 | `meshcore_node_uptime_seconds` | Time since it started |
@@ -28,6 +29,7 @@ All are labelled `node`, the name you gave it in `config.json`.
 | `meshcore_node_tx_airtime_seconds`, `_rx_airtime_seconds` | Airtime since it started |
 | `meshcore_node_telemetry{channel, type}` | Each Cayenne LPP telemetry reading, such as `type="voltage"` |
 | `meshmon_companion_up` | 0 if meshmon couldn't reach the companion, or its last round failed |
+| `meshmon_round_duration_seconds` | How long the last round of polls took; keep it well under `interval_seconds` |
 
 A node that stops answering keeps its last status values. Compare
 `meshcore_node_last_seen_timestamp_seconds` with `time()` to see how old they

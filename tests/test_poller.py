@@ -73,9 +73,19 @@ class Station:
     def __init__(self, *nodes: Node, down_after_misses: int = 2) -> None:
         self.registry = CollectorRegistry()
         self.now = 1_700_000_000.0
+        self.ticks = 0.0
         self.poller = Poller(
-            nodes, down_after_misses, Metrics(self.registry), clock=lambda: self.now
+            nodes,
+            down_after_misses,
+            Metrics(self.registry),
+            clock=lambda: self.now,
+            timer=self.tick,
         )
+
+    def tick(self) -> float:
+        # A fake monotonic timer that advances 2.5 seconds on every call.
+        self.ticks += 2.5
+        return self.ticks
 
     def poll(self, session: FakeSession) -> None:
         asyncio.run(self.poller.poll(session))
@@ -296,3 +306,26 @@ def test_a_refused_command_fails_only_that_node(caplog: pytest.LogCaptureFixture
     # A warning naming the node, not a logged traceback for an unexpected error.
     assert [r.levelno for r in caplog.records] == [logging.WARNING]
     assert "Hilltop Repeater: the companion refused a command" in caplog.text
+
+
+def test_a_nodes_poll_time_is_recorded() -> None:
+    station = Station(REPEATER)
+    session = FakeSession()
+    session.statuses[REPEATER.public_key] = STATUS
+
+    station.poll(session)
+
+    assert station.value("meshcore_node_poll_seconds", REPEATER) == 2.5
+
+
+def test_a_silent_node_keeps_its_last_poll_time() -> None:
+    station = Station(REPEATER)
+    session = FakeSession()
+    session.statuses[REPEATER.public_key] = STATUS
+    station.poll(session)
+
+    del session.statuses[REPEATER.public_key]
+    station.poll(session)
+
+    assert station.value("meshcore_node_missed_polls", REPEATER) == 1
+    assert station.value("meshcore_node_poll_seconds", REPEATER) == 2.5
