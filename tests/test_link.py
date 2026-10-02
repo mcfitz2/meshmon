@@ -9,7 +9,14 @@ from meshcore.events import Event, EventDispatcher
 from meshcore.packets import BinaryReqType
 
 from meshmon.config import Node
-from meshmon.link import LinkDownError, MeshcoreSession, NoReplyError, Reading, Status
+from meshmon.link import (
+    BadReplyError,
+    LinkDownError,
+    MeshcoreSession,
+    NoReplyError,
+    Reading,
+    Status,
+)
 
 REPEATER = Node("Hilltop Repeater", "0123456789abcdef" * 4)
 OTHER = Node("Library Room", "fedcba9876543210" * 4, password="guest")
@@ -143,6 +150,21 @@ def test_silence_is_no_reply_and_leaves_no_subscriptions() -> None:
     with pytest.raises(NoReplyError):
         run(mc, lambda session: session.status(REPEATER))
 
+    assert mc.dispatcher.subscriptions == []
+
+
+def test_a_reply_meshmon_cant_read_is_a_bad_reply_not_silence() -> None:
+    mc = FakeMeshCore()
+    mc.suggested_timeout_ms = 5000
+    garbled = status_reply(REPEATER)
+    del garbled.payload["bat"]
+    mc.replies["STATUS"] = [garbled]
+
+    started = time.monotonic()
+    with pytest.raises(BadReplyError):
+        run(mc, lambda session: session.status(REPEATER))
+
+    assert time.monotonic() - started < 1
     assert mc.dispatcher.subscriptions == []
 
 
