@@ -1,4 +1,5 @@
 import json
+import logging
 from pathlib import Path
 
 import pytest
@@ -53,6 +54,12 @@ def test_nodes_are_read_with_a_blank_password_by_default(tmp_path: Path) -> None
         ),
         ({"interval_seconds": 0, "nodes": []}, "interval_seconds"),
         ({"down_after_misses": 0, "nodes": []}, "down_after_misses"),
+        ({"interval_seconds": True, "nodes": []}, "interval_seconds"),
+        ({"listen_port": 70000, "nodes": []}, "listen_port"),
+        ({"companion_port": 65536, "nodes": []}, "companion_port"),
+        ({"nodes": {"a": 1}}, "nodes must be a list"),
+        ({"companion_host": None, "nodes": []}, "companion_host"),
+        ({"listen_host": 5, "nodes": []}, "listen_host"),
     ],
 )
 def test_bad_config_is_refused_with_the_reason(tmp_path: Path, data: object, message: str) -> None:
@@ -85,3 +92,22 @@ def test_a_node_that_is_not_an_object_is_named_by_position_without_echoing_it(
         load(write(tmp_path / "config.json", {"nodes": ["hunter2"]}))
     assert "node 1" in str(error.value)
     assert "hunter2" not in str(error.value)
+
+
+def test_unknown_keys_are_warned_about(tmp_path: Path, caplog: pytest.LogCaptureFixture) -> None:
+    data = {
+        "interval_second": 600,
+        "nodes": [{"name": "a", "public_key": KEY, "pasword": "x"}],
+    }
+    with caplog.at_level(logging.WARNING):
+        config = load(write(tmp_path / "config.json", data))
+
+    assert config.interval_seconds == 900
+    assert "interval_second" in caplog.text
+    assert "pasword" in caplog.text
+
+
+def test_port_65535_is_allowed(tmp_path: Path) -> None:
+    config = load(write(tmp_path / "config.json", {"listen_port": 65535, "nodes": []}))
+
+    assert config.listen_port == 65535
