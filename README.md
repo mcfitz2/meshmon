@@ -139,5 +139,5 @@ git tag v0.1.2 && git push origin v0.1.2
 The Release workflow runs CI, checks that the wheel carries the manifest and
 that both versions match the tag, then publishes the wheel to a GitHub release.
 
-The poller is tested against a fake session. `meshmon.link`, which drives
-`meshcore_py`, is not unit tested. Check it against a real companion.
+The poller is tested against a fake session, and `meshmon.link` against a fake
+MeshCore. Check changes to `meshmon.link` against a real companion too.
