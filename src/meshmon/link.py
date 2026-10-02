@@ -227,7 +227,8 @@ class MeshcoreSession:
             )
         try:
             sent = await self._command(send)
-            timeout = sent.payload["suggested_timeout"] / 1000
+            # meshcore_py allows 1.25 times the companion's suggestion; so does meshmon.
+            timeout = sent.payload["suggested_timeout"] / 800
             dropped = asyncio.ensure_future(self.disconnected.wait())
             either: set[asyncio.Future[Any]] = {reply, dropped}
             try:
