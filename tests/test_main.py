@@ -49,3 +49,21 @@ def test_the_companion_is_up_after_a_round(monkeypatch: pytest.MonkeyPatch) -> N
         asyncio.run(main.run(Config(), registry))
 
     assert registry.get_sample_value("meshmon_companion_up") == 1
+
+
+def test_an_unexpected_failure_marks_the_companion_down_and_keeps_looping(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    @asynccontextmanager
+    async def broken(host: str, port: int) -> AsyncIterator[Any]:
+        raise RuntimeError("boom")
+        yield  # pragma: no cover
+
+    monkeypatch.setattr(main, "asyncio", SimpleNamespace(sleep=stop))
+    monkeypatch.setattr(link, "connect", broken)
+    registry = CollectorRegistry()
+
+    with pytest.raises(Stop):
+        asyncio.run(main.run(Config(), registry))
+
+    assert registry.get_sample_value("meshmon_companion_up") == 0
