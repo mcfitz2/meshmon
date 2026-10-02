@@ -67,3 +67,20 @@ def test_an_unexpected_failure_marks_the_companion_down_and_keeps_looping(
         asyncio.run(main.run(Config(), registry))
 
     assert registry.get_sample_value("meshmon_companion_up") == 0
+
+
+def test_the_round_duration_is_recorded(monkeypatch: pytest.MonkeyPatch) -> None:
+    @asynccontextmanager
+    async def reachable(host: str, port: int) -> AsyncIterator[Any]:
+        yield object()
+
+    monkeypatch.setattr(main, "asyncio", SimpleNamespace(sleep=stop))
+    monkeypatch.setattr(link, "connect", reachable)
+    registry = CollectorRegistry()
+
+    with pytest.raises(Stop):
+        asyncio.run(main.run(Config(), registry))
+
+    duration = registry.get_sample_value("meshmon_round_duration_seconds")
+    assert duration is not None
+    assert duration >= 0

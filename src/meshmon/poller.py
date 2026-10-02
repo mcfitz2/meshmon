@@ -19,11 +19,13 @@ class Poller:
         down_after_misses: int,
         metrics: Metrics,
         clock: Callable[[], float] = time.time,
+        timer: Callable[[], float] = time.monotonic,
     ) -> None:
         self.nodes = tuple(nodes)
         self.down_after_misses = down_after_misses
         self.metrics = metrics
         self.clock = clock
+        self.timer = timer
         self._misses = dict.fromkeys((node.name for node in self.nodes), 0)
 
     async def poll(self, session: Session) -> None:
@@ -32,6 +34,7 @@ class Poller:
         error counts as a miss for that node and is logged. A command the companion
         refuses for one node counts as a miss for that node."""
         for node in self.nodes:
+            started = self.timer()
             try:
                 await self._poll(session, node)
             except NoReplyError as error:
@@ -52,6 +55,7 @@ class Poller:
                 log.exception("polling %s failed", node.name)
                 self._missed(node)
             else:
+                self.metrics.poll_seconds.labels(node.name).set(self.timer() - started)
                 self._answered(node)
 
     async def _poll(self, session: Session, node: Node) -> None:

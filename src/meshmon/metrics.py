@@ -15,6 +15,7 @@ class Metrics:
 
         self.up = gauge("up", "1 unless the node has missed enough polls in a row")
         self.missed_polls = gauge("missed_polls", "Polls missed in a row")
+        self.poll_seconds = gauge("poll_seconds", "How long the node's last answered poll took")
         self.login_ok = gauge("login_ok", "1 if the node took meshmon's login")
         self.last_seen = gauge(
             "last_seen_timestamp_seconds", "When the node last answered with its status"

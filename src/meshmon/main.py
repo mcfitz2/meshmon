@@ -8,6 +8,7 @@ import asyncio
 import logging
 import os
 import sys
+import time
 from pathlib import Path
 
 from prometheus_client import CollectorRegistry, Gauge, start_http_server
@@ -34,8 +35,14 @@ async def run(settings: config.Config, registry: CollectorRegistry) -> None:
         "1 if meshmon reached the openHop companion on its last round of polls",
         registry=registry,
     )
+    round_duration = Gauge(
+        "meshmon_round_duration_seconds",
+        "How long meshmon's last round of polls took",
+        registry=registry,
+    )
     poller = Poller(settings.nodes, settings.down_after_misses, Metrics(registry))
     while True:
+        started = time.monotonic()
         try:
             async with link.connect(settings.companion_host, settings.companion_port) as session:
                 companion_up.set(1)
@@ -46,6 +53,7 @@ async def run(settings: config.Config, registry: CollectorRegistry) -> None:
         except Exception:
             log.exception("the round of polls failed")
             companion_up.set(0)
+        round_duration.set(time.monotonic() - started)
         await asyncio.sleep(settings.interval_seconds)
 
 
