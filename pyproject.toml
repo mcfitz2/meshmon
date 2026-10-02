@@ -1,6 +1,6 @@
 [project]
 name = "meshmon"
-version = "0.1.1"
+version = "0.2.0"
 description = "openHop Repeater plugin: polls MeshCore repeaters for status and telemetry and exports them as Prometheus metrics"
 readme = "README.md"
 license = "MIT"
