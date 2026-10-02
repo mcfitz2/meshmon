@@ -1,4 +1,5 @@
 import asyncio
+import logging
 from dataclasses import replace
 
 import pytest
@@ -35,6 +36,7 @@ class FakeSession:
         self.readings: dict[str, tuple[Reading, ...]] = {}
         self.refuse_login: set[str] = set()
         self.link_down: set[str] = set()
+        self.broken: set[str] = set()
         self.logins: list[tuple[str, str]] = []
 
     async def login(self, node: Node) -> bool:
@@ -46,6 +48,8 @@ class FakeSession:
         return node.public_key not in self.refuse_login
 
     async def status(self, node: Node) -> Status:
+        if node.public_key in self.broken:
+            raise RuntimeError("bad payload")
         if node.public_key not in self.statuses:
             raise NoReplyError(node.name)
         return self.statuses[node.public_key]
@@ -214,3 +218,21 @@ def test_a_reading_the_node_stops_sending_is_dropped() -> None:
     assert (
         station.value("meshcore_node_telemetry", REPEATER, channel="2", type="temperature") is None
     )
+
+
+def test_an_unexpected_error_counts_as_a_miss_and_the_round_goes_on(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    station = Station(REPEATER, ROOM, down_after_misses=1)
+    session = FakeSession()
+    session.statuses[REPEATER.public_key] = STATUS
+    session.statuses[ROOM.public_key] = STATUS
+    session.broken.add(REPEATER.public_key)
+
+    with caplog.at_level(logging.ERROR):
+        station.poll(session)
+
+    assert station.value("meshcore_node_up", REPEATER) == 0
+    assert station.value("meshcore_node_missed_polls", REPEATER) == 1
+    assert station.value("meshcore_node_up", ROOM) == 1
+    assert "polling Hilltop Repeater failed" in caplog.text

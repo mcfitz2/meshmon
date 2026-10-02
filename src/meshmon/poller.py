@@ -6,7 +6,7 @@ import time
 from collections.abc import Callable, Iterable
 
 from meshmon.config import Node
-from meshmon.link import NoReplyError, Session
+from meshmon.link import LinkDownError, NoReplyError, Session
 from meshmon.metrics import Metrics
 
 log = logging.getLogger(__name__)
@@ -28,12 +28,20 @@ class Poller:
 
     async def poll(self, session: Session) -> None:
         """Poll every node once. A LinkDownError from the session ends the round
-        without counting a miss: the companion failed, not the nodes."""
+        without counting a miss: the companion failed, not the nodes. Any other
+        error counts as a miss for that node and is logged."""
         for node in self.nodes:
             try:
                 await self._poll(session, node)
             except NoReplyError as error:
                 log.info("%s", error)
+                self._missed(node)
+            except LinkDownError:
+                raise
+            except Exception:
+                # A bug or an answer meshmon didn't expect; count it so a node that
+                # always fails still ends up down, and keep polling the rest.
+                log.exception("polling %s failed", node.name)
                 self._missed(node)
             else:
                 self._misses[node.name] = 0
