@@ -39,9 +39,9 @@ class Config:
     nodes: tuple[Node, ...] = ()
 
 
-def _node(raw: Any) -> Node:
+def _node(position: int, raw: Any) -> Node:
     if not isinstance(raw, dict) or not isinstance(raw.get("name"), str) or not raw["name"]:
-        raise ConfigError(f"each node needs a name: {raw!r}")
+        raise ConfigError(f"node {position} in nodes needs a name")
     public_key = str(raw.get("public_key", "")).lower()
     if not _PUBLIC_KEY.fullmatch(public_key):
         raise ConfigError(f"node {raw['name']}: public_key must be 64 hex digits")
@@ -62,7 +62,9 @@ def load(path: Path) -> Config:
         raise ConfigError(f"can't read {path}: {error}") from error
     if not isinstance(raw, dict):
         raise ConfigError(f"{path} must hold a JSON object")
-    nodes = tuple(_node(node) for node in raw.get("nodes", []))
+    nodes = tuple(
+        _node(position, node) for position, node in enumerate(raw.get("nodes", []), start=1)
+    )
     for kind in ("name", "public_key"):
         values = [getattr(node, kind) for node in nodes]
         if len(set(values)) != len(values):

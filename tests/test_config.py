@@ -63,3 +63,25 @@ def test_bad_config_is_refused_with_the_reason(tmp_path: Path, data: object, mes
 def test_a_missing_file_is_a_config_error(tmp_path: Path) -> None:
     with pytest.raises(ConfigError, match="config.json"):
         load(tmp_path / "config.json")
+
+
+def test_a_bad_node_is_named_by_position_without_echoing_it(tmp_path: Path) -> None:
+    data = {
+        "nodes": [
+            {"name": "ok", "public_key": KEY},
+            {"public_key": KEY[::-1], "password": "hunter2"},
+        ]
+    }
+    with pytest.raises(ConfigError) as error:
+        load(write(tmp_path / "config.json", data))
+    assert "node 2" in str(error.value)
+    assert "hunter2" not in str(error.value)
+
+
+def test_a_node_that_is_not_an_object_is_named_by_position_without_echoing_it(
+    tmp_path: Path,
+) -> None:
+    with pytest.raises(ConfigError) as error:
+        load(write(tmp_path / "config.json", {"nodes": ["hunter2"]}))
+    assert "node 1" in str(error.value)
+    assert "hunter2" not in str(error.value)
