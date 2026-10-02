@@ -6,7 +6,7 @@ import pytest
 from prometheus_client import CollectorRegistry
 
 from meshmon.config import Node
-from meshmon.link import LinkDownError, NoReplyError, Reading, Status
+from meshmon.link import BadReplyError, LinkDownError, NoReplyError, Reading, Status
 from meshmon.metrics import Metrics
 from meshmon.poller import Poller
 
@@ -37,6 +37,8 @@ class FakeSession:
         self.refuse_login: set[str] = set()
         self.link_down: set[str] = set()
         self.broken: set[str] = set()
+        self.garbled: set[str] = set()
+        self.garbled_telemetry: set[str] = set()
         self.logins: list[tuple[str, str]] = []
 
     async def login(self, node: Node) -> bool:
@@ -50,11 +52,15 @@ class FakeSession:
     async def status(self, node: Node) -> Status:
         if node.public_key in self.broken:
             raise RuntimeError("bad payload")
+        if node.public_key in self.garbled:
+            raise BadReplyError(f"{node.name} sent a reply meshmon can't read")
         if node.public_key not in self.statuses:
             raise NoReplyError(node.name)
         return self.statuses[node.public_key]
 
     async def telemetry(self, node: Node) -> tuple[Reading, ...]:
+        if node.public_key in self.garbled_telemetry:
+            raise BadReplyError(f"{node.name} sent telemetry meshmon can't read")
         if node.public_key not in self.readings:
             raise NoReplyError(node.name)
         return self.readings[node.public_key]
@@ -236,3 +242,38 @@ def test_an_unexpected_error_counts_as_a_miss_and_the_round_goes_on(
     assert station.value("meshcore_node_missed_polls", REPEATER) == 1
     assert station.value("meshcore_node_up", ROOM) == 1
     assert "polling Hilltop Repeater failed" in caplog.text
+
+
+def test_a_node_whose_reply_cant_be_read_is_up_and_logged(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    station = Station(REPEATER)
+    session = FakeSession()
+    session.statuses[REPEATER.public_key] = STATUS
+    session.garbled.add(REPEATER.public_key)
+
+    with caplog.at_level(logging.ERROR):
+        station.poll(session)
+
+    assert station.value("meshcore_node_up", REPEATER) == 1
+    assert station.value("meshcore_node_missed_polls", REPEATER) == 0
+    assert station.value("meshcore_node_battery_volts", REPEATER) is None
+    assert [r for r in caplog.records if r.levelno == logging.ERROR]
+    assert "Hilltop Repeater sent a reply meshmon can't read" in caplog.text
+
+
+def test_unreadable_telemetry_does_not_fail_the_node(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    station = Station(REPEATER)
+    session = FakeSession()
+    session.statuses[REPEATER.public_key] = STATUS
+    session.garbled_telemetry.add(REPEATER.public_key)
+
+    with caplog.at_level(logging.ERROR):
+        station.poll(session)
+
+    assert station.value("meshcore_node_up", REPEATER) == 1
+    assert station.value("meshcore_node_missed_polls", REPEATER) == 0
+    assert station.value("meshcore_node_battery_volts", REPEATER) == 4.012
+    assert "can't read" in caplog.text

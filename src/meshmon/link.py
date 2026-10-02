@@ -25,6 +25,10 @@ class NoReplyError(Exception):
     """The node didn't answer in time."""
 
 
+class BadReplyError(Exception):
+    """The node answered, but not in a form meshmon can read."""
+
+
 @dataclass(frozen=True)
 class Status:
     battery_mv: int
@@ -205,8 +209,16 @@ class MeshcoreSession:
         for event_type, answer in replies.items():
 
             def on_reply(event: Any, answer: Callable[[Any], Reply] = answer) -> None:
-                if not reply.done():
+                if reply.done():
+                    return
+                # meshcore_py's dispatcher swallows callback errors, which would
+                # leave meshmon waiting and then count the node as silent.
+                try:
                     reply.set_result(answer(event))
+                except Exception as error:
+                    bad = BadReplyError(f"{node.name} sent a reply meshmon can't read: {error!r}")
+                    bad.__cause__ = error
+                    reply.set_exception(bad)
 
             subscriptions.append(
                 self._mc.subscribe(

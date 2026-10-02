@@ -6,7 +6,7 @@ import time
 from collections.abc import Callable, Iterable
 
 from meshmon.config import Node
-from meshmon.link import LinkDownError, NoReplyError, Session
+from meshmon.link import BadReplyError, LinkDownError, NoReplyError, Session
 from meshmon.metrics import Metrics
 
 log = logging.getLogger(__name__)
@@ -36,6 +36,10 @@ class Poller:
             except NoReplyError as error:
                 log.info("%s", error)
                 self._missed(node)
+            except BadReplyError as error:
+                # It answered, so it's up; what it said is lost.
+                log.error("%s", error)
+                self._answered(node)
             except LinkDownError:
                 raise
             except Exception:
@@ -44,9 +48,7 @@ class Poller:
                 log.exception("polling %s failed", node.name)
                 self._missed(node)
             else:
-                self._misses[node.name] = 0
-                self.metrics.missed_polls.labels(node.name).set(0)
-                self.metrics.up.labels(node.name).set(1)
+                self._answered(node)
 
     async def _poll(self, session: Session, node: Node) -> None:
         if not await session.login(node):
@@ -60,8 +62,15 @@ class Poller:
         except NoReplyError:
             # Status says it's up; telemetry is extra, and not every node sends it.
             log.info("%s sent no telemetry", node.name)
+        except BadReplyError as error:
+            log.error("%s", error)
         else:
             self.metrics.readings(node, readings)
+
+    def _answered(self, node: Node) -> None:
+        self._misses[node.name] = 0
+        self.metrics.missed_polls.labels(node.name).set(0)
+        self.metrics.up.labels(node.name).set(1)
 
     def _missed(self, node: Node) -> None:
         misses = self._misses[node.name] = self._misses[node.name] + 1
