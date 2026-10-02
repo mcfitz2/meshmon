@@ -1,7 +1,7 @@
 """Talking to nodes through an openHop companion with ``meshcore_py``.
 
-``MeshcoreSession`` is not unit tested; the poller's tests use a fake Session.
-Check it against the real companion.
+``MeshcoreSession`` is tested against a fake MeshCore in
+tests/test_link.py; check changes against the real companion too.
 """
 
 import asyncio

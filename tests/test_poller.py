@@ -1,10 +1,11 @@
 import asyncio
 from dataclasses import replace
 
+import pytest
 from prometheus_client import CollectorRegistry
 
 from meshmon.config import Node
-from meshmon.link import NoReplyError, Reading, Status
+from meshmon.link import LinkDownError, NoReplyError, Reading, Status
 from meshmon.metrics import Metrics
 from meshmon.poller import Poller
 
@@ -33,9 +34,12 @@ class FakeSession:
         self.statuses: dict[str, Status] = {}
         self.readings: dict[str, tuple[Reading, ...]] = {}
         self.refuse_login: set[str] = set()
+        self.link_down: set[str] = set()
         self.logins: list[tuple[str, str]] = []
 
     async def login(self, node: Node) -> bool:
+        if node.public_key in self.link_down:
+            raise LinkDownError(node.name)
         if node.public_key not in self.statuses:
             raise NoReplyError(node.name)
         self.logins.append((node.name, node.password))
@@ -177,3 +181,36 @@ def test_one_silent_node_does_not_stop_the_others_being_polled() -> None:
 
     assert station.value("meshcore_node_up", REPEATER) == 0
     assert station.value("meshcore_node_up", ROOM) == 1
+
+
+def test_losing_the_companion_ends_the_round_without_counting_misses() -> None:
+    station = Station(REPEATER, ROOM, down_after_misses=1)
+    session = FakeSession()
+    session.link_down.add(REPEATER.public_key)
+    session.statuses[ROOM.public_key] = STATUS
+
+    with pytest.raises(LinkDownError):
+        station.poll(session)
+
+    for node in (REPEATER, ROOM):
+        assert station.value("meshcore_node_up", node) is None
+        assert station.value("meshcore_node_missed_polls", node) is None
+
+
+def test_a_reading_the_node_stops_sending_is_dropped() -> None:
+    station = Station(REPEATER)
+    session = FakeSession()
+    session.statuses[REPEATER.public_key] = STATUS
+    session.readings[REPEATER.public_key] = (
+        Reading(1, "voltage", 4.01),
+        Reading(2, "temperature", 21.5),
+    )
+    station.poll(session)
+    session.readings[REPEATER.public_key] = (Reading(1, "voltage", 4.02),)
+
+    station.poll(session)
+
+    assert station.value("meshcore_node_telemetry", REPEATER, channel="1", type="voltage") == 4.02
+    assert (
+        station.value("meshcore_node_telemetry", REPEATER, channel="2", type="temperature") is None
+    )
