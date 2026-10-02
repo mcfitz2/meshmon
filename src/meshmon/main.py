@@ -43,6 +43,9 @@ async def run(settings: config.Config, registry: CollectorRegistry) -> None:
         except link.LinkDownError as error:
             log.error("%s", error)
             companion_up.set(0)
+        except Exception:
+            log.exception("the round of polls failed")
+            companion_up.set(0)
         await asyncio.sleep(settings.interval_seconds)
 
 

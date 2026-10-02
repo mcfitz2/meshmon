@@ -27,7 +27,7 @@ All are labelled `node`, the name you gave it in `config.json`.
 | `meshcore_node_packets_received`, `_packets_sent`, `_receive_errors` | Counts since it started |
 | `meshcore_node_tx_airtime_seconds`, `_rx_airtime_seconds` | Airtime since it started |
 | `meshcore_node_telemetry{channel, type}` | Each Cayenne LPP telemetry reading, such as `type="voltage"` |
-| `meshmon_companion_up` | 0 if meshmon couldn't reach the companion on its last round |
+| `meshmon_companion_up` | 0 if meshmon couldn't reach the companion, or its last round failed |
 
 A node that stops answering keeps its last status values. Compare
 `meshcore_node_last_seen_timestamp_seconds` with `time()` to see how old they
