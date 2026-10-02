@@ -6,7 +6,7 @@ import pytest
 from prometheus_client import CollectorRegistry
 
 from meshmon.config import Node
-from meshmon.link import BadReplyError, LinkDownError, NoReplyError, Reading, Status
+from meshmon.link import BadReplyError, CommandError, LinkDownError, NoReplyError, Reading, Status
 from meshmon.metrics import Metrics
 from meshmon.poller import Poller
 
@@ -37,11 +37,14 @@ class FakeSession:
         self.refuse_login: set[str] = set()
         self.link_down: set[str] = set()
         self.broken: set[str] = set()
+        self.refuse_command: set[str] = set()
         self.garbled: set[str] = set()
         self.garbled_telemetry: set[str] = set()
         self.logins: list[tuple[str, str]] = []
 
     async def login(self, node: Node) -> bool:
+        if node.public_key in self.refuse_command:
+            raise CommandError(f"the companion refused a command for {node.name}")
         if node.public_key in self.link_down:
             raise LinkDownError(node.name)
         if node.public_key not in self.statuses:
@@ -277,3 +280,19 @@ def test_unreadable_telemetry_does_not_fail_the_node(
     assert station.value("meshcore_node_missed_polls", REPEATER) == 0
     assert station.value("meshcore_node_battery_volts", REPEATER) == 4.012
     assert "can't read" in caplog.text
+
+
+def test_a_refused_command_fails_only_that_node(caplog: pytest.LogCaptureFixture) -> None:
+    station = Station(REPEATER, ROOM, down_after_misses=1)
+    session = FakeSession()
+    session.refuse_command.add(REPEATER.public_key)
+    session.statuses[ROOM.public_key] = STATUS
+
+    with caplog.at_level(logging.WARNING):
+        station.poll(session)
+
+    assert station.value("meshcore_node_up", REPEATER) == 0
+    assert station.value("meshcore_node_up", ROOM) == 1
+    # A warning naming the node, not a logged traceback for an unexpected error.
+    assert [r.levelno for r in caplog.records] == [logging.WARNING]
+    assert "Hilltop Repeater: the companion refused a command" in caplog.text

@@ -6,7 +6,7 @@ import time
 from collections.abc import Callable, Iterable
 
 from meshmon.config import Node
-from meshmon.link import BadReplyError, LinkDownError, NoReplyError, Session
+from meshmon.link import BadReplyError, CommandError, LinkDownError, NoReplyError, Session
 from meshmon.metrics import Metrics
 
 log = logging.getLogger(__name__)
@@ -29,7 +29,8 @@ class Poller:
     async def poll(self, session: Session) -> None:
         """Poll every node once. A LinkDownError from the session ends the round
         without counting a miss: the companion failed, not the nodes. Any other
-        error counts as a miss for that node and is logged."""
+        error counts as a miss for that node and is logged. A command the companion
+        refuses for one node counts as a miss for that node."""
         for node in self.nodes:
             try:
                 await self._poll(session, node)
@@ -40,6 +41,9 @@ class Poller:
                 # It answered, so it's up; what it said is lost.
                 log.error("%s", error)
                 self._answered(node)
+            except CommandError as error:
+                log.warning("%s: %s", node.name, error)
+                self._missed(node)
             except LinkDownError:
                 raise
             except Exception:
@@ -59,7 +63,7 @@ class Poller:
         self.metrics.status(node, await session.status(node), self.clock())
         try:
             readings = await session.telemetry(node)
-        except NoReplyError:
+        except (NoReplyError, CommandError):
             # Status says it's up; telemetry is extra, and not every node sends it.
             log.info("%s sent no telemetry", node.name)
         except BadReplyError as error:

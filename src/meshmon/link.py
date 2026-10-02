@@ -29,6 +29,10 @@ class BadReplyError(Exception):
     """The node answered, but not in a form meshmon can read."""
 
 
+class CommandError(Exception):
+    """The companion refused a command about one node, such as adding its contact."""
+
+
 @dataclass(frozen=True)
 class Status:
     battery_mv: int
@@ -177,7 +181,12 @@ class MeshcoreSession:
         async with self._lock:
             result = await call(self._mc)
         if result.type == EventType.ERROR:
-            raise LinkDownError(f"the companion refused a command: {result.payload}")
+            # The firmware's own refusals carry an error code (or nothing) and are
+            # about this command; meshcore_py's timeouts carry a reason or an error,
+            # and mean the link itself is in trouble.
+            if "reason" in result.payload or "error" in result.payload:
+                raise LinkDownError(f"the companion didn't answer a command: {result.payload}")
+            raise CommandError(f"the companion refused a command: {result.payload}")
         return result
 
     async def _request(

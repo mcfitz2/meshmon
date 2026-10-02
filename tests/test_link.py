@@ -11,6 +11,7 @@ from meshcore.packets import BinaryReqType
 from meshmon.config import Node
 from meshmon.link import (
     BadReplyError,
+    CommandError,
     LinkDownError,
     MeshcoreSession,
     NoReplyError,
@@ -273,10 +274,33 @@ def test_nothing_is_sent_once_the_companion_is_lost() -> None:
     assert mc.sent == []
 
 
-def test_a_command_the_companion_refuses_is_link_down() -> None:
+def test_a_firmware_refusal_is_a_command_error() -> None:
     mc = FakeMeshCore()
-    # Current behaviour; issue #5 makes firmware error codes per-node.
     mc.result = Event(EventType.ERROR, {"error_code": 3})
+
+    with pytest.raises(CommandError):
+        run(mc, lambda session: session.status(REPEATER))
+
+
+def test_an_empty_firmware_refusal_is_a_command_error() -> None:
+    mc = FakeMeshCore()
+    mc.result = Event(EventType.ERROR, {})
+
+    with pytest.raises(CommandError):
+        run(mc, lambda session: session.status(REPEATER))
+
+
+def test_a_command_timeout_is_link_down() -> None:
+    mc = FakeMeshCore()
+    mc.result = Event(EventType.ERROR, {"reason": "timeout"})
+
+    with pytest.raises(LinkDownError):
+        run(mc, lambda session: session.status(REPEATER))
+
+
+def test_a_command_exception_is_link_down() -> None:
+    mc = FakeMeshCore()
+    mc.result = Event(EventType.ERROR, {"error": "boom"})
 
     with pytest.raises(LinkDownError):
         run(mc, lambda session: session.status(REPEATER))
