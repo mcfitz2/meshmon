@@ -31,3 +31,21 @@ jobs:
       - run: gh release create "$GITHUB_REF_NAME" dist/* --generate-notes
         env:
           GH_TOKEN: ${{ github.token }}
+
+  # Tells mcfitz2/lab2, which pins this plugin for the observer, that a release
+  # exists; its openhop-plugin-bump workflow opens the PR moving the pin. A
+  # separate job so a failed notification can be re-run without rebuilding,
+  # and never undoes the release. LAB2_DISPATCH_TOKEN is a fine-grained PAT
+  # on mcfitz2/lab2 with Contents read/write, which repository_dispatch needs.
+  notify-lab2:
+    needs: release
+    runs-on: ubuntu-24.04
+    permissions: {}
+    steps:
+      - run: |
+          gh api repos/mcfitz2/lab2/dispatches \
+            -f event_type=openhop-plugin-release \
+            -f 'client_payload[plugin]=meshmon' \
+            -f "client_payload[tag]=$GITHUB_REF_NAME"
+        env:
+          GH_TOKEN: ${{ secrets.LAB2_DISPATCH_TOKEN }}
