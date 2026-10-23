@@ -7,7 +7,7 @@ license = "MIT"
 license-files = ["LICENSE"]
 requires-python = ">=3.11"
 dependencies = [
-    "meshcore==2.3.14",
+    "meshcore==2.3.17",
     "prometheus-client>=0.20",
 ]
 
