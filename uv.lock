@@ -1,5 +1,5 @@
 version = 1
-revision = 2
+revision = 5
 requires-python = ">=3.11"
 resolution-markers = [
     "python_full_version >= '3.15'",
@@ -270,7 +270,7 @@ wheels = [
 
 [[package]]
 name = "meshcore"
-version = "2.3.14"
+version = "2.3.19"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "bleak" },
@@ -278,9 +278,9 @@ dependencies = [
     { name = "pycryptodome" },
     { name = "pyserial-asyncio-fast" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/45/c9/7a542153ae37be0c1d94702b5a4ef7a4263cc838f9aa1cbc0a0804c03adc/meshcore-2.3.14.tar.gz", hash = "sha256:7cdfb4fd89c490733ebe688791af1c90e0c1d1154dbc2d14844c7f02e018bb3c", size = 108037, upload-time = "2026-09-19T22:48:58.061Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/e1/48/a26ec7525a685e87a53f647b34af391de7e8c0d8f69010ea6347fff62dba/meshcore-2.3.19.tar.gz", hash = "sha256:44576b0fdc26355452ec265ff1b08d2932634766b6c98cb74263c0dfcad5dbe3", size = 110346, upload-time = "2026-11-11T18:28:57.252Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/db/46/ccd0cae4486ee5f93bdc3ed8603f04c6c39b4ed1639f9fc2610b72fe1a85/meshcore-2.3.14-py3-none-any.whl", hash = "sha256:f826110cd2f2efb3deb9c8011b4cc52763423c3f72843990c0167ced18ab6ecf", size = 67040, upload-time = "2026-09-19T22:48:56.647Z" },
+    { url = "https://files.pythonhosted.org/packages/6e/89/dfae8a6b37ab20c4a67354f04e789e83187142e25059dda6eaaa20f5c407/meshcore-2.3.19-py3-none-any.whl", hash = "sha256:d636a847631501404e7d2026d41e8190274ad12caf3962138020250c9ff45000", size = 67524, upload-time = "2026-11-11T18:28:56Z" },
 ]
 
 [[package]]
@@ -301,7 +301,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "meshcore", specifier = "==2.3.14" },
+    { name = "meshcore", specifier = "==2.3.19" },
     { name = "prometheus-client", specifier = ">=0.20" },
 ]
 
